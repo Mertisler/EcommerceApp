@@ -3,6 +3,7 @@ package com.loc.ecommerapp.data.repositories_impl
 import androidx.room.withTransaction // (veya kullanılan ORM'in transaction kütüphanesi)
 import com.loc.ecommerapp.data.api.PaymentApi
 import com.loc.ecommerapp.data.api.models.PaymentRequestDto
+import com.loc.ecommerapp.data.local.AppDatabase
 import com.loc.ecommerapp.data.local.OrderDao
 import com.loc.ecommerapp.domain.entities.CartItem
 import com.loc.ecommerapp.domain.entities.Order
