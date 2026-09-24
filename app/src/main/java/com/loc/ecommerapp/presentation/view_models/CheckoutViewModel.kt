@@ -2,46 +2,52 @@ package com.loc.ecommerapp.presentation.view_models
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.loc.ecommerapp.domain.entities.CartItem
+import com.loc.ecommerapp.domain.repositories.CartRepository
 import com.loc.ecommerapp.domain.use_cases.ProcessCheckoutUseCase
 import com.loc.ecommerapp.presentation.states.CheckoutState
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @HiltViewModel
 class CheckoutViewModel @Inject constructor(
-    // ViewModel sadece UseCase'i bilir. Repository, API, veya Dao bilmez! (Clean Architecture)
-    private val processCheckoutUseCase: ProcessCheckoutUseCase
+    private val processCheckoutUseCase: ProcessCheckoutUseCase,
+    private val cartRepository: CartRepository // EKLENDİ: Sepet verisini almak için
 ) : ViewModel() {
 
-    // Kapsülleme (Encapsulation): _uiState sadece içeriden değiştirilebilir.
     private val _uiState = MutableStateFlow<CheckoutState>(CheckoutState.Idle)
-
-    // uiState (Dışarıya açık): View (Compose) tarafından 'collectAsState' ile dinlenir, değiştirilemez.
     val uiState: StateFlow<CheckoutState> = _uiState.asStateFlow()
 
-    fun startCheckout(userId: String, cartItems: List<CartItem>, totalAmount: Double) {
-        // Eğer şu an zaten bir ödeme işlemi sürüyorsa (Butona çift tıklandıysa) yoksay.
+    // EKLENDİ: Ekranda toplam tutarı göstermek için sepeti dinliyoruz
+    val totalAmount: StateFlow<Double> = cartRepository.getCartItems()
+        .map { items -> items.sumOf { it.totalPrice } }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0.0)
+
+    // DEĞİŞTİRİLDİ: Artık UI'dan cartItems ve totalAmount beklemiyoruz
+    fun startCheckout(userId: String) {
         if (_uiState.value is CheckoutState.Loading) return
 
-        // 1. Ekranı yükleme durumuna geçir
         _uiState.value = CheckoutState.Loading
 
-        // 2. Coroutine içinde (Asenkron) iş mantığını (UseCase) başlat
         viewModelScope.launch {
+            // 1. Sepetin o anki güncel halini Repository'den çekiyoruz
+            val currentCartItems = cartRepository.getCartItems().first()
+            val currentTotalAmount = currentCartItems.sumOf { it.totalPrice }
 
-            // UseCase çalışır (arkaplanda reserve, payment, commit/rollback yapar)
+            // 2. UseCase'i bu gerçek verilerle başlatıyoruz
             val result = processCheckoutUseCase(
                 userId = userId,
-                cartItems = cartItems,
-                totalAmount = totalAmount
+                cartItems = currentCartItems,
+                totalAmount = currentTotalAmount
             )
 
-            // 3. Sonuca göre UI durumunu güncelle
             result.fold(
                 onSuccess = { createdOrder ->
                     _uiState.value = CheckoutState.Success(createdOrder)
@@ -54,7 +60,6 @@ class CheckoutViewModel @Inject constructor(
         }
     }
 
-    // İşlem bittiğinde (Örn: Hata dialogu kapatıldığında) ekranı başa döndürmek için
     fun consumeState() {
         _uiState.value = CheckoutState.Idle
     }

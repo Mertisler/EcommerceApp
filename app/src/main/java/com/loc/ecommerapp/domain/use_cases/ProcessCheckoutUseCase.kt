@@ -7,8 +7,9 @@ import com.loc.ecommerapp.domain.repositories.CartRepository
 import com.loc.ecommerapp.domain.repositories.OrderRepository
 import java.util.Date
 import java.util.UUID
+import javax.inject.Inject
 
-class ProcessCheckoutUseCase(
+class ProcessCheckoutUseCase @Inject constructor(
     private val orderRepository: OrderRepository,
     private val cartRepository: CartRepository
 ) {
