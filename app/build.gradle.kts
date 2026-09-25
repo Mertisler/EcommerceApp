@@ -5,6 +5,7 @@ plugins {
 
     id("kotlin-kapt")
     id("com.google.dagger.hilt.android")
+    alias(libs.plugins.google.gms.google.services)
 }
 
 android {
@@ -75,6 +76,17 @@ dependencies {
     kapt("com.google.dagger:hilt-compiler:2.51.1")
     implementation("androidx.hilt:hilt-navigation-compose:1.2.0")
 
+    // Google Credentials
+    implementation(libs.androidx.credentials)
+    implementation(libs.androidx.credentials.play.services.auth)
+    implementation(libs.googleid)
+
+    // Firebase (BoM Yönetiminde)
+    implementation(platform(libs.firebase.bom))
+    implementation(libs.firebase.auth)
+    implementation(libs.firebase.firestore)
+    implementation(libs.firebase.database)
+
     // Room
     implementation("androidx.room:room-runtime:2.8.1")
     kapt("androidx.room:room-compiler:2.8.1")
@@ -86,7 +98,6 @@ dependencies {
     // Accompanist (uyumlu sürüm)
     implementation("com.google.accompanist:accompanist-swiperefresh:0.36.0")
 }
-
 
 kapt {
     correctErrorTypes = true

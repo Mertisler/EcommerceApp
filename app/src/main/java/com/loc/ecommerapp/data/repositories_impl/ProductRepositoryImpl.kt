@@ -1,37 +1,55 @@
 package com.loc.ecommerapp.data.repositories_impl
 
+import com.google.firebase.firestore.FirebaseFirestore
 import com.loc.ecommerapp.domain.entities.Product
 import com.loc.ecommerapp.domain.repositories.ProductRepository
-import kotlinx.coroutines.delay
+import kotlinx.coroutines.tasks.await
 import javax.inject.Inject
 
-class ProductRepositoryImpl @Inject constructor() : ProductRepository {
-
-    // Verilerin her iki fonksiyondan da erişilebilmesi için sınıf seviyesine alındı
-    private val mockData = listOf(
-        Product("P1", "MacBook Pro", 85000.0, 5, "M3 Çip, 16GB RAM"),
-        Product("P2", "Logitech MX Master 3", 3500.0, 12, "Kablosuz Mouse"),
-        Product("P3", "Mekanik Klavye", 2000.0, 0, "Stokta yok") // Tükenmiş ürün
-    )
+class ProductRepositoryImpl @Inject constructor(
+    private val firestore: FirebaseFirestore // Hilt tarafından otomatik sağlanır
+) : ProductRepository {
 
     override suspend fun getProducts(): Result<List<Product>> {
-        // API isteği gibi davranması için 1.5 saniye gecikme
-        delay(1500)
-        return Result.success(mockData)
+        return try {
+            // Firestore'daki "products" koleksiyonuna bağlanıp verileri çeker
+            val snapshot = firestore.collection("products").get().await()
+
+            val productList = snapshot.documents.mapNotNull { document ->
+                // DocumentSnapshot'tan manuel eşleme veya DTO kullanımı
+                Product(
+                    id = document.id,
+                    name = document.getString("name") ?: "",
+                    price = document.getDouble("price") ?: 0.0,
+                    availableStock = document.getLong("actual_stock")?.toInt() ?: 0,
+                    description = document.getString("description") ?: ""
+                )
+            }
+
+            Result.success(productList)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
     }
 
-    // Arayüzün (Interface) zorunlu kıldığı eksik fonksiyon eklendi
-    override suspend fun getProductById(id: String): Result<Product> { // Entity'nizdeki ID parametresinin ismine göre düzeltin
-        // Detay isteği için daha kısa bir ağ gecikmesi simülasyonu
-        delay(500)
+    override suspend fun getProductById(id: String): Result<Product> {
+        return try {
+            val document = firestore.collection("products").document(id).get().await()
 
-        // Gönderilen ID ile eşleşen ürünü listede arıyoruz
-        val product = mockData.find { it.id == id }
-
-        return if (product != null) {
-            Result.success(product)
-        } else {
-            Result.failure(Exception("Aradığınız ürün bulunamadı."))
+            if (document.exists()) {
+                val product = Product(
+                    id = document.id,
+                    name = document.getString("name") ?: "",
+                    price = document.getDouble("price") ?: 0.0,
+                    availableStock = document.getLong("actual_stock")?.toInt() ?: 0,
+                    description = document.getString("description") ?: ""
+                )
+                Result.success(product)
+            } else {
+                Result.failure(Exception("Ürün bulunamadı"))
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
         }
     }
 }
