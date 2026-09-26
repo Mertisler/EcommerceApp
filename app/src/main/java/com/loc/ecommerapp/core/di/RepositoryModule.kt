@@ -1,8 +1,10 @@
 package com.loc.ecommerapp.core.di
 
+import com.loc.ecommerapp.data.repositories_impl.AuthRepositoryImpl
 import com.loc.ecommerapp.data.repositories_impl.CartRepositoryImpl
 import com.loc.ecommerapp.data.repositories_impl.OrderRepositoryImpl
 import com.loc.ecommerapp.data.repositories_impl.ProductRepositoryImpl
+import com.loc.ecommerapp.domain.repositories.AuthRepository
 import com.loc.ecommerapp.domain.repositories.CartRepository
 import com.loc.ecommerapp.domain.repositories.OrderRepository
 import com.loc.ecommerapp.domain.repositories.ProductRepository
@@ -35,4 +37,11 @@ abstract class RepositoryModule {
     abstract fun bindProductRepository(
         productRepositoryImpl: ProductRepositoryImpl
     ): ProductRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindAuthRepository(
+        authRepositoryImpl: AuthRepositoryImpl
+    ): AuthRepository
 }
+

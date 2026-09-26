@@ -7,21 +7,50 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
-import com.loc.ecommerapp.presentation.views.CartScreen
-import com.loc.ecommerapp.presentation.views.CheckoutScreen
-import com.loc.ecommerapp.presentation.views.ProductDetailScreen
-import com.loc.ecommerapp.presentation.views.ProductListScreen
+import com.google.firebase.auth.FirebaseAuth
+import com.loc.ecommerapp.presentation.views.*
 
 @Composable
 fun EcommerceNavGraph(
     navController: NavHostController = rememberNavController()
 ) {
+    val firebaseAuth = FirebaseAuth.getInstance()
+    // Oturum durumuna göre dinamik başlangıç rotası
+    val startDestination = if (firebaseAuth.currentUser != null) "login" else "product_list"
+
     NavHost(
         navController = navController,
-        startDestination = "product_list"
+        startDestination = startDestination
     ) {
 
-        // 1. EKRAN: Ürün Listesi
+        // 1. GİRİŞ SAYFASI
+        composable("login") {
+            LoginScreen(
+                onNavigateToHome = {
+                    navController.navigate("product_list") {
+                        popUpTo("login") { inclusive = true }
+                    }
+                },
+                onNavigateToRegister = {
+                    navController.navigate("register")
+                }
+            )
+        }
+
+        // 2. KAYIT SAYFASI
+        composable("register") {
+            RegisterScreen(
+                onNavigateToHome = {
+                    navController.navigate("product_list") {
+                        popUpTo("login") { inclusive = true }
+                    }
+                },
+                onNavigateBackToLogin = {
+                    navController.popBackStack()
+                }
+            )
+        }
+
         composable("product_list") {
             ProductListScreen(
                 onNavigateToCart = { navController.navigate("cart") },
@@ -31,7 +60,6 @@ fun EcommerceNavGraph(
             )
         }
 
-        // 2. EKRAN: Sepet Sayfası
         composable("cart") {
             CartScreen(
                 onNavigateToCheckout = {
@@ -40,11 +68,12 @@ fun EcommerceNavGraph(
             )
         }
 
-        // 3. EKRAN: Ödeme Sayfası
+        // 3. ÖDEME SAYFASI (Gerçek Kullanıcı Kimliği ile)
         composable("checkout") {
+            val currentUserId = firebaseAuth.currentUser?.uid ?: "BİLİNMEYEN_KULLANICI"
+
             CheckoutScreen(
-                userId = "USER_123", // Gerçek projede login'den gelir
-                // cartItems ve totalAmount sildik, sayfa kendini yönetecek
+                userId = currentUserId,
                 onNavigateHome = {
                     navController.popBackStack(
                         route = "product_list",
@@ -54,6 +83,7 @@ fun EcommerceNavGraph(
             )
         }
 
+        // 4. ÜRÜN DETAY SAYFASI
         composable(
             route = "product_detail/{productId}",
             arguments = listOf(navArgument("productId") { type = NavType.StringType })
@@ -63,7 +93,5 @@ fun EcommerceNavGraph(
                 onNavigateToCart = { navController.navigate("cart") }
             )
         }
-
-
     }
 }
